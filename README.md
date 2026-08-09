@@ -132,6 +132,12 @@ That's it. It now checks fares at 02:37, 08:37, 14:37, 20:37 UTC daily.
   [fast-flights](https://github.com/AWeirdDev/flights) for a new release and
   bump the pin in `requirements.txt`. GitHub emails you when a scheduled run
   fails, so silence means it's working.
+- **About `flightdata.py`:** fast-flights 3.0.2 drops Google's "top flights"
+  section — usually the cheapest itinerary — so this repo parses the raw
+  payload itself (both sections) and only borrows fast-flights' fetcher and
+  models. If you bump the fast-flights pin, confirm upstream fixed this
+  (their `parse_js` must read `payload[2][0]` as well as `payload[3][0]`)
+  or keep `flightdata.py` as is.
 - **"Scheduled workflow disabled" email:** GitHub pauses crons after ~60 days
   without repo activity. The bot's own data commits normally prevent this;
   if it happens, one click re-enables it.

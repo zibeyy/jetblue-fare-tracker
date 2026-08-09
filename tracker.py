@@ -26,7 +26,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
-from fast_flights import FlightQuery, FlightsNotFound, create_query, get_flights
+from fast_flights import FlightQuery, FlightsNotFound, create_query
+
+from flightdata import get_flights_full
 
 ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = ROOT / "config.json"
@@ -107,7 +109,7 @@ def fetch_itineraries(cfg: dict, origin: str, dest: str, date: str):
         if pause:
             time.sleep(pause)
         try:
-            return get_flights(query)
+            return get_flights_full(query)
         except FlightsNotFound:
             return None
         except Exception as err:  # network hiccups, parse breaks, blocks
