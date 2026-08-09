@@ -1,0 +1,16 @@
+{
+  "_note": "EDIT the watches below - these dates are placeholders. Everything else is optional. Prices tracked are Blue Basic (the cheapest Google Flights shows); the alert fires when price + blue_upcharge_estimate_usd <= blue_target_usd.",
+  "watches": [
+    { "from": "BOS", "to": "LAX", "dates": ["2026-11-13", "2026-11-20"] },
+    { "from": "LAX", "to": "BOS", "dates": ["2026-11-16", "2026-11-23"] }
+  ],
+  "airline_code": "B6",
+  "nonstop_only": true,
+  "alert": {
+    "blue_target_usd": 200,
+    "blue_upcharge_estimate_usd": 35,
+    "cooldown_hours": 20,
+    "realert_extra_drop_usd": 10
+  },
+  "ntfy_topic": ""
+}
