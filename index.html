@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>JetBlue BOS ⇄ LAX fares</title>
+<title>JetBlue fare tracker</title>
 <style>
   :root {
     color-scheme: light;
@@ -16,6 +16,10 @@
     --baseline:       #c3c2b7;
     --border:         rgba(11,11,11,0.10);
     --delta-good:     #006300;
+    --status-good:    #0ca30c;
+    --good-tint:      rgba(12,163,12,0.10);
+    --btn-ink:        #0b0b0b;
+    --btn-ink-text:   #ffffff;
     --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a;
     --series-4: #eda100; --series-5: #e87ba4; --series-6: #008300;
     --series-7: #4a3aa7; --series-8: #e34948;
@@ -32,6 +36,10 @@
       --baseline:       #383835;
       --border:         rgba(255,255,255,0.10);
       --delta-good:     #0ca30c;
+      --status-good:    #0ca30c;
+      --good-tint:      rgba(12,163,12,0.16);
+      --btn-ink:        #ffffff;
+      --btn-ink-text:   #0b0b0b;
       --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
       --series-4: #c98500; --series-5: #d55181; --series-6: #008300;
       --series-7: #9085e9; --series-8: #e66767;
@@ -48,39 +56,62 @@
     --baseline:       #383835;
     --border:         rgba(255,255,255,0.10);
     --delta-good:     #0ca30c;
+    --status-good:    #0ca30c;
+    --good-tint:      rgba(12,163,12,0.16);
+    --btn-ink:        #ffffff;
+    --btn-ink-text:   #0b0b0b;
     --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
     --series-4: #c98500; --series-5: #d55181; --series-6: #008300;
     --series-7: #9085e9; --series-8: #e66767;
   }
 
   * { box-sizing: border-box; }
+  html, body { margin: 0; }
   body {
-    margin: 0;
     background: var(--page);
     color: var(--text-primary);
     font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
   }
-  .wrap { max-width: 1060px; margin: 0 auto; padding: 24px 16px 48px; }
-  h1 { font-size: 20px; margin: 0 0 2px; }
-  .subtitle { color: var(--text-secondary); margin: 0 0 20px; font-size: 13px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 18px 56px; }
 
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 16px; }
-  .tile {
+  header h1 { font-size: 21px; margin: 0; letter-spacing: -0.01em; }
+  .headline { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .meta { color: var(--text-muted); font-size: 12.5px; }
+  .tagline { color: var(--text-secondary); font-size: 13px; margin: 3px 0 22px; }
+
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 26px 0 10px; }
+  .section-title:first-of-type { margin-top: 0; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .datecard {
     background: var(--surface-1); border: 1px solid var(--border);
-    border-radius: 12px; padding: 12px 14px;
+    border-radius: 14px; padding: 14px 16px 12px;
   }
-  .tile .label { font-size: 12px; color: var(--text-secondary); }
-  .tile .value { font-size: 26px; font-weight: 600; margin-top: 2px; }
-  .tile .context { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .datecard .toprow { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .datecard .route { font-size: 12.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 7px; }
+  .datecard .route .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .datecard .when { font-size: 15px; font-weight: 600; margin-top: 6px; }
+  .datecard .pricerow { display: flex; align-items: baseline; gap: 8px; margin-top: 2px; }
+  .datecard .price { font-size: 28px; font-weight: 650; letter-spacing: -0.01em; }
+  .datecard .delta { font-size: 12.5px; color: var(--text-muted); }
+  .datecard .delta.drop { color: var(--delta-good); font-weight: 600; }
+  .datecard .range { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .datecard svg { display: block; margin-top: 8px; }
+  .pill {
+    font-size: 11.5px; padding: 2.5px 9px; border-radius: 999px; white-space: nowrap;
+    color: var(--text-muted); background: transparent; border: 1px solid var(--border);
+  }
+  .pill.good { color: var(--status-good); background: var(--good-tint); border-color: transparent; font-weight: 600; }
 
   .card {
     background: var(--surface-1); border: 1px solid var(--border);
-    border-radius: 12px; padding: 16px; margin-bottom: 16px;
+    border-radius: 14px; padding: 18px; margin-top: 12px;
   }
-  .card h2 { font-size: 14px; margin: 0 0 2px; }
-  .card .sub { font-size: 12px; color: var(--text-muted); margin: 0 0 10px; }
+  .cardhead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .card h2 { font-size: 14.5px; margin: 0; }
+  .card .sub { font-size: 12.5px; color: var(--text-muted); margin: 2px 0 0; }
 
-  .controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .controls { display: flex; gap: 6px; }
   .controls button {
     font: inherit; font-size: 12px; color: var(--text-secondary);
     background: none; border: 1px solid var(--border); border-radius: 8px;
@@ -90,50 +121,110 @@
   .controls button[aria-pressed="true"] { color: var(--text-primary); font-weight: 600; }
   .controls button[aria-pressed="true"]::before { content: "✓ "; }
 
-  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0 4px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 12px 0 2px; }
   .legend button {
-    font: inherit; font-size: 12px; color: var(--text-secondary);
+    font: inherit; font-size: 12.5px; color: var(--text-secondary);
     background: none; border: none; padding: 2px 0; cursor: pointer;
-    display: inline-flex; align-items: center; gap: 6px;
+    display: inline-flex; align-items: center; gap: 7px;
   }
-  .legend button .key { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
-  .legend button[aria-pressed="false"] { opacity: 0.38; }
+  .legend button .key { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
+  .legend button[aria-pressed="false"] { opacity: 0.35; }
 
-  .chartbox { position: relative; }
-  svg { display: block; width: 100%; height: auto; }
+  .chartbox { position: relative; margin-top: 4px; }
+  .chartbox svg { display: block; width: 100%; height: auto; }
+  .chartnote { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
   .tooltip {
     position: absolute; pointer-events: none; display: none;
     background: var(--surface-1); border: 1px solid var(--border);
-    border-radius: 8px; padding: 8px 10px; font-size: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.12); min-width: 150px; z-index: 2;
+    border-radius: 10px; padding: 9px 11px; font-size: 12.5px;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.14); min-width: 170px; z-index: 2;
   }
-  .tooltip .when { color: var(--text-muted); margin-bottom: 4px; }
-  .tooltip .row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
-  .tooltip .row .key { width: 12px; height: 3px; border-radius: 2px; flex: none; }
-  .tooltip .row .val { font-weight: 600; }
+  .tooltip .when { color: var(--text-muted); margin-bottom: 5px; font-size: 11.5px; }
+  .tooltip .row { display: flex; align-items: center; gap: 7px; margin-top: 3px; }
+  .tooltip .row .key { width: 13px; height: 3px; border-radius: 2px; flex: none; }
+  .tooltip .row .val { font-weight: 650; min-width: 42px; }
   .tooltip .row .name { color: var(--text-secondary); }
 
-  table { border-collapse: collapse; width: 100%; font-size: 13px; }
-  th, td { text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--gridline); }
-  th { color: var(--text-secondary); font-weight: 500; font-size: 12px; }
+  /* manage card */
+  .watchrow { padding: 10px 0; border-bottom: 1px solid var(--gridline); }
+  .watchrow:last-of-type { border-bottom: none; }
+  .watchrow .routename { font-weight: 600; font-size: 13.5px; margin-bottom: 7px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 3px 6px 3px 11px; font-size: 12.5px; background: var(--page);
+  }
+  .chip button {
+    font: inherit; border: none; background: none; cursor: pointer;
+    color: var(--text-muted); font-size: 13px; line-height: 1; padding: 2px 5px;
+    border-radius: 50%;
+  }
+  .chip button:hover { color: var(--text-primary); background: var(--gridline); }
+  .adder { display: inline-flex; gap: 6px; align-items: center; }
+  input[type="date"], input[type="number"], input.code {
+    font: inherit; font-size: 12.5px; color: var(--text-primary);
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 8px; padding: 4px 8px;
+  }
+  input.code { width: 58px; text-transform: uppercase; }
+  input[type="number"] { width: 84px; }
+  .btn {
+    font: inherit; font-size: 12.5px; cursor: pointer;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface-1); color: var(--text-primary); padding: 5px 12px;
+  }
+  .btn:hover { background: var(--gridline); }
+  .btn.primary { background: var(--btn-ink); color: var(--btn-ink-text); border-color: transparent; font-weight: 600; }
+  .btn.primary:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+  .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+  .badge {
+    font-size: 11.5px; color: var(--text-secondary); border: 1px solid var(--border);
+    border-radius: 999px; padding: 2px 9px;
+  }
+  .statusmsg { font-size: 12.5px; color: var(--text-secondary); margin-top: 10px; }
+  .statusmsg.err { color: #d03b3b; }
+  pre.log {
+    font: 11.5px/1.5 ui-monospace, Consolas, monospace; color: var(--text-secondary);
+    background: var(--page); border: 1px solid var(--gridline); border-radius: 10px;
+    padding: 10px 12px; margin: 10px 0 0; max-height: 240px; overflow: auto;
+    white-space: pre-wrap;
+  }
+  .targetrow { display: flex; align-items: center; gap: 8px; padding: 12px 0 2px; font-size: 13px; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 10px; }
+  th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--gridline); }
+  tbody tr:last-child td { border-bottom: none; }
+  th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
   th:first-child, td:first-child { text-align: left; }
   td.num { font-variant-numeric: tabular-nums; }
-  td .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 7px; }
+  td .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 8px; }
   .drop { color: var(--delta-good); }
   .dim { color: var(--text-muted); }
 
-  .notice {
+  .hero {
     background: var(--surface-1); border: 1px solid var(--border);
-    border-radius: 12px; padding: 24px; text-align: center; color: var(--text-secondary);
+    border-radius: 14px; padding: 34px 24px; text-align: center; color: var(--text-secondary);
   }
-  .notice code { font-size: 12px; }
-  footer { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
+  .hero .big { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+  .hero .btn { margin-top: 14px; }
+  footer { color: var(--text-muted); font-size: 12px; margin-top: 22px; }
+  @media (max-width: 560px) {
+    .wrap { padding: 20px 12px 40px; }
+    .datecard .price { font-size: 25px; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>JetBlue BOS ⇄ LAX fares</h1>
-  <p class="subtitle" id="subtitle">Cheapest tracked fare per check (Blue Basic).</p>
+  <header>
+    <div class="headline">
+      <h1>JetBlue fare tracker</h1>
+      <span class="meta" id="headmeta"></span>
+    </div>
+    <p class="tagline" id="tagline">Blue Basic fares · one-way · nonstop · checked 4× a day</p>
+  </header>
 
   <div id="app"></div>
 
@@ -144,240 +235,300 @@
 "use strict";
 (async function () {
   const app = document.getElementById("app");
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const MAX_SERIES = 8;
+  const CRON_UTC_HOURS = [2, 8, 14, 20], CRON_MIN = 37;
+
   const el = (tag, cls, text) => {
-    const node = document.createElement(tag);
-    if (cls) node.className = cls;
-    if (text !== undefined) node.textContent = text;
-    return node;
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  };
+  const fmtMoney = n => `$${n.toLocaleString()}`;
+  const fmtClock = d => d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const fmtDay = d => `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  const fmtTravel = iso => {
+    const d = new Date(iso + "T12:00:00");
+    return `${DAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  };
+  const fmtTravelShort = iso => { const [, m, dd] = iso.split("-").map(Number); return `${MONTHS[m - 1]} ${dd}`; };
+  const relTime = t => {
+    const m = Math.round((Date.now() - t) / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return `${m} min ago`;
+    if (m < 48 * 60) return `${Math.round(m / 60)} h ago`;
+    return `${Math.round(m / 1440)} d ago`;
   };
 
-  function showNotice(lines) {
-    app.textContent = "";
-    const box = el("div", "notice");
-    lines.forEach((line, i) => {
-      const p = el(i === 0 ? "div" : "div", null);
-      if (line.code) { p.appendChild(el("code", null, line.code)); }
-      else p.textContent = line;
-      if (i > 0) p.style.marginTop = "6px";
-      box.appendChild(p);
-    });
-    app.appendChild(box);
+  // ---------------- data loading ----------------
+  async function fetchJSON(url, opts) {
+    const r = await fetch(url, { cache: "no-store", ...opts });
+    if (!r.ok) throw new Error(String(r.status));
+    return r.json();
   }
+
+  let panel = null; // /api/status result when served by serve.py
+  try {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 2500);
+    const s = await fetchJSON("/api/status", { signal: ctrl.signal });
+    if (s.panel) panel = s;
+  } catch { /* plain static hosting (GitHub Pages) */ }
+
+  let config = null;
+  try { config = await fetchJSON("config.json"); } catch { config = {}; }
+  const target = config.alert?.price_target_usd
+    ?? (config.alert?.blue_target_usd != null
+        ? config.alert.blue_target_usd - (config.alert.blue_upcharge_estimate_usd ?? 35)
+        : null);
+
+  let obs = [];
+  let csvOk = false;
+  try {
+    const r = await fetch("data/history.csv", { cache: "no-store" });
+    if (r.ok) {
+      const rows = parseCSV(await r.text());
+      if (rows.length > 1) {
+        const col = Object.fromEntries(rows[0].map((h, i) => [h, i]));
+        obs = rows.slice(1).map(x => ({
+          ts: new Date(x[col.run_ts_utc]),
+          direction: x[col.direction],
+          travelDate: x[col.travel_date],
+          depart: x[col.depart_local],
+          price: Number(x[col.price_usd]),
+        })).filter(o => !isNaN(o.ts) && o.price > 0);
+      }
+      csvOk = true;
+    }
+  } catch { /* handled below */ }
 
   if (location.protocol === "file:") {
-    showNotice(["This page fetches its data, so it can't run from file://.",
-      "Serve the folder locally and open http://localhost:8000 :",
-      { code: "python -m http.server 8000" }]);
+    const hero = el("div", "hero");
+    hero.append(el("div", "big", "This page needs to be served, not opened as a file"),
+      el("div", null, "From the project folder run:  .venv\\Scripts\\python serve.py  — then open http://localhost:8000"));
+    app.appendChild(hero);
     return;
   }
 
-  // ---------- load ----------
-  let csvText = "", config = null;
-  try {
-    const resp = await fetch("data/history.csv", { cache: "no-store" });
-    if (!resp.ok) throw new Error(resp.status);
-    csvText = await resp.text();
-  } catch {
-    showNotice(["No data yet.",
-      "The first scheduled workflow run will create data/history.csv and this page will come alive."]);
-    return;
-  }
-  try {
-    const resp = await fetch("config.json", { cache: "no-store" });
-    if (resp.ok) config = await resp.json();
-  } catch { /* threshold line simply omitted */ }
-
-  // ---------- parse CSV (quote-aware) ----------
   function parseCSV(text) {
-    const rows = [];
-    let row = [], field = "", inQuotes = false;
+    const out = [];
+    let row = [], field = "", q = false;
     for (let i = 0; i < text.length; i++) {
-      const ch = text[i];
-      if (inQuotes) {
-        if (ch === '"') {
-          if (text[i + 1] === '"') { field += '"'; i++; }
-          else inQuotes = false;
-        } else field += ch;
-      } else if (ch === '"') inQuotes = true;
-      else if (ch === ",") { row.push(field); field = ""; }
-      else if (ch === "\n" || ch === "\r") {
-        if (ch === "\r" && text[i + 1] === "\n") i++;
+      const c = text[i];
+      if (q) {
+        if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+        else field += c;
+      } else if (c === '"') q = true;
+      else if (c === ",") { row.push(field); field = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
         row.push(field); field = "";
-        if (row.length > 1 || row[0] !== "") rows.push(row);
+        if (row.length > 1 || row[0] !== "") out.push(row);
         row = [];
-      } else field += ch;
+      } else field += c;
     }
-    if (field !== "" || row.length) { row.push(field); rows.push(row); }
-    return rows;
+    if (field !== "" || row.length) { row.push(field); out.push(row); }
+    return out;
   }
 
-  const raw = parseCSV(csvText);
-  if (raw.length < 2) {
-    showNotice(["No observations recorded yet — check back after the next scheduled run."]);
-    return;
-  }
-  const header = raw[0];
-  const col = Object.fromEntries(header.map((h, i) => [h, i]));
-  const obs = raw.slice(1).map(r => ({
-    ts: new Date(r[col.run_ts_utc]),
-    direction: r[col.direction],
-    travelDate: r[col.travel_date],
-    depart: r[col.depart_local],
-    price: Number(r[col.price_usd]),
-  })).filter(o => !isNaN(o.ts) && o.price > 0);
-
-  // ---------- series: one per direction + travel date ----------
-  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const fmtTravelDate = d => { const [, m, day] = d.split("-").map(Number); return `${MONTHS[m - 1]} ${day}`; };
+  // ---------------- series structures ----------------
   const seriesName = k => {
     const [dir, date] = k.split("|");
-    return `${dir.replace("-", " → ")} · ${fmtTravelDate(date)}`;
+    return `${dir.replace("-", " → ")} · ${fmtTravelShort(date)}`;
   };
-
   const keys = [...new Set(obs.map(o => `${o.direction}|${o.travelDate}`))].sort();
-  const MAX_SERIES = 8;
   const shownKeys = keys.slice(0, MAX_SERIES);
   const colorOf = Object.fromEntries(shownKeys.map((k, i) => [k, `var(--series-${i + 1})`]));
-
-  // per series: min price per run timestamp (the cheapest fare that check)
-  const seriesData = new Map();
-  for (const k of shownKeys) seriesData.set(k, new Map());
-  for (const o of obs) {
-    const k = `${o.direction}|${o.travelDate}`;
-    if (!seriesData.has(k)) continue;
-    const m = seriesData.get(k);
-    const t = o.ts.getTime();
-    if (!m.has(t) || o.price < m.get(t).price) m.set(t, { price: o.price, depart: o.depart });
-  }
-  const seriesPoints = new Map(); // key -> [{t, price, depart}] sorted
-  for (const [k, m] of seriesData) {
-    seriesPoints.set(k, [...m.entries()]
-      .map(([t, v]) => ({ t, ...v }))
-      .sort((a, b) => a.t - b.t));
-  }
-
-  const alertCfg = (config && config.alert) || {};
-  const target = alertCfg.blue_target_usd;
-  const upcharge = alertCfg.blue_upcharge_estimate_usd;
-  const basicThreshold = (target != null && upcharge != null) ? target - upcharge : null;
-
-  document.getElementById("subtitle").textContent =
-    "Cheapest tracked fare per check. Prices are Blue Basic — the Blue fare runs roughly $" +
-    (upcharge ?? "25–45") + " higher.";
-
-  // ---------- state ----------
-  const visible = new Set(shownKeys);
-  let rangeDays = null; // null = all
   const runTimes = [...new Set(obs.map(o => o.ts.getTime()))].sort((a, b) => a - b);
 
-  // ---------- build static DOM ----------
-  const tiles = el("div", "tiles");
-  const chartCard = el("div", "card");
-  const controls = el("div", "controls");
-  const legend = el("div", "legend");
-  const chartbox = el("div", "chartbox");
-  const tooltip = el("div", "tooltip");
-  const tableCard = el("div", "card");
-  app.append(tiles, chartCard, tableCard);
-  chartCard.append(el("h2", null, "Price over time"),
-    el("div", "sub", "One line per route and travel date · hover for every value"),
-    controls, legend, chartbox);
-  chartbox.appendChild(tooltip);
-
-  [["All", null], ["Last 30 days", 30], ["Last 7 days", 7]].forEach(([label, days]) => {
-    const b = el("button", null, label);
-    b.setAttribute("aria-pressed", String(days === rangeDays));
-    b.addEventListener("click", () => {
-      rangeDays = days;
-      controls.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", "false"));
-      b.setAttribute("aria-pressed", "true");
-      renderAll();
-    });
-    controls.appendChild(b);
-  });
-
-  if (shownKeys.length > 1) {
-    for (const k of shownKeys) {
-      const b = el("button");
-      b.setAttribute("aria-pressed", "true");
-      const key = el("span", "key"); key.style.background = colorOf[k];
-      b.append(key, el("span", null, seriesName(k)));
-      b.addEventListener("click", () => {
-        if (visible.has(k) && visible.size === 1) return;
-        visible.has(k) ? visible.delete(k) : visible.add(k);
-        b.setAttribute("aria-pressed", String(visible.has(k)));
-        renderAll();
-      });
-      legend.appendChild(b);
+  const seriesPoints = new Map();
+  for (const k of shownKeys) {
+    const byRun = new Map();
+    for (const o of obs) {
+      if (`${o.direction}|${o.travelDate}` !== k) continue;
+      const t = o.ts.getTime();
+      if (!byRun.has(t) || o.price < byRun.get(t).price) byRun.set(t, { price: o.price, depart: o.depart });
     }
-    if (keys.length > MAX_SERIES) {
-      legend.appendChild(el("span", "dim", `+${keys.length - MAX_SERIES} more not shown — narrow your dates`));
-    }
+    seriesPoints.set(k, [...byRun.entries()].map(([t, v]) => ({ t, ...v })).sort((a, b) => a.t - b.t));
   }
 
-  // ---------- render ----------
+  // ---------------- header meta ----------------
+  (function headMeta() {
+    const meta = document.getElementById("headmeta");
+    const parts = [];
+    if (runTimes.length) parts.push(`last check ${relTime(runTimes[runTimes.length - 1])}`);
+    const now = new Date();
+    let next = null;
+    for (let add = 0; add < 2 && !next; add++) {
+      for (const h of CRON_UTC_HOURS) {
+        const c = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + add, h, CRON_MIN));
+        if (c > now) { next = c; break; }
+      }
+    }
+    if (next) parts.push(`next auto-check ~${fmtClock(next)}`);
+    meta.textContent = parts.join(" · ");
+    if (target != null) {
+      document.getElementById("tagline").textContent =
+        `Blue Basic fares · one-way · nonstop · alert at ${fmtMoney(target)} or less · 4 checks a day`;
+    }
+  })();
+
+  // ---------------- view state ----------------
+  const visible = new Set(shownKeys);
+  let rangeDays = null;
+  const cutoff = () => rangeDays === null ? -Infinity : Date.now() - rangeDays * 864e5;
+
+  // ---------------- sections ----------------
+  const cardsWrap = el("div");
+  const chartCard = el("div", "card");
+  const manageCard = el("div", "card");
+  const tableCard = el("div", "card");
+
+  if (obs.length) {
+    app.appendChild(el("div", "section-title", "Your dates"));
+    app.appendChild(cardsWrap);
+    app.appendChild(chartCard);
+  } else {
+    const hero = el("div", "hero");
+    hero.append(el("div", "big", "No fare checks recorded yet"));
+    if (panel) {
+      hero.append(el("div", null, "Add your travel dates below, then run your first check."));
+    } else {
+      hero.append(el("div", null, "The scheduled workflow records fares 4× a day — data will appear after the first run."));
+    }
+    app.appendChild(hero);
+  }
+  if (panel) app.appendChild(manageCard);
+  else if (!obs.length) { /* nothing else to show */ }
+  if (obs.length) app.appendChild(tableCard);
+
+  // ---------------- date cards ----------------
+  function sparkline(pts, color) {
+    const w = 104, h = 26, n = Math.min(pts.length, 12);
+    const view = pts.slice(-n);
+    const svg = svgEl("svg", { width: w, height: h, viewBox: `0 0 ${w} ${h}`, "aria-hidden": "true" });
+    if (view.length >= 2) {
+      const lo = Math.min(...view.map(p => p.price)), hi = Math.max(...view.map(p => p.price));
+      const X = i => 3 + i * (w - 10) / (view.length - 1);
+      const Y = p => hi === lo ? h / 2 : 4 + (hi - p) * (h - 8) / (hi - lo);
+      svg.appendChild(svgEl("path", {
+        d: view.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(p.price).toFixed(1)}`).join(""),
+        fill: "none", stroke: "var(--baseline)", "stroke-width": 1.5,
+        "stroke-linecap": "round", "stroke-linejoin": "round",
+      }));
+      svg.appendChild(svgEl("circle", { cx: X(view.length - 1), cy: Y(view[view.length - 1].price), r: 3, fill: color }));
+    } else if (view.length === 1) {
+      svg.appendChild(svgEl("circle", { cx: w - 7, cy: h / 2, r: 3, fill: color }));
+    }
+    return svg;
+  }
+
+  function renderCards() {
+    cardsWrap.textContent = "";
+    const grid = el("div", "cards");
+    for (const k of shownKeys) {
+      const pts = seriesPoints.get(k);
+      if (!pts.length) continue;
+      const [dir, travelDate] = k.split("|");
+      const last = pts[pts.length - 1], prev = pts[pts.length - 2];
+      const lo = pts.reduce((a, b) => b.price < a.price ? b : a);
+      const hi = pts.reduce((a, b) => b.price > a.price ? b : a);
+
+      const card = el("div", "datecard");
+      const top = el("div", "toprow");
+      const route = el("span", "route");
+      const dot = el("span", "dot"); dot.style.background = colorOf[k];
+      route.append(dot, document.createTextNode(dir.replace("-", " → ")));
+      top.appendChild(route);
+      if (target != null) {
+        const under = last.price <= target;
+        top.appendChild(el("span", under ? "pill good" : "pill",
+          under ? `✓ at or under ${fmtMoney(target)}` : `${fmtMoney(last.price - target)} over target`));
+      }
+      card.appendChild(top);
+      card.appendChild(el("div", "when", fmtTravel(travelDate)));
+
+      const priceRow = el("div", "pricerow");
+      priceRow.appendChild(el("span", "price", fmtMoney(last.price)));
+      if (prev) {
+        const d = last.price - prev.price;
+        priceRow.appendChild(el("span", d < 0 ? "delta drop" : "delta",
+          d === 0 ? "no change" : d < 0 ? `▼ ${fmtMoney(-d)} since last check` : `▲ ${fmtMoney(d)} since last check`));
+      } else {
+        priceRow.appendChild(el("span", "delta", "first check"));
+      }
+      card.appendChild(priceRow);
+      card.appendChild(el("div", "range",
+        `low ${fmtMoney(lo.price)} (${fmtDay(new Date(lo.t))}) · high ${fmtMoney(hi.price)} · departs ${last.depart.slice(11)}`));
+      card.appendChild(sparkline(pts, colorOf[k]));
+      grid.appendChild(card);
+    }
+    cardsWrap.appendChild(grid);
+  }
+
+  // ---------------- chart ----------------
   const NS = "http://www.w3.org/2000/svg";
-  const svgEl = (tag, attrs) => {
+  function svgEl(tag, attrs) {
     const n = document.createElementNS(NS, tag);
     for (const [a, v] of Object.entries(attrs)) n.setAttribute(a, v);
     return n;
-  };
-  const fmtTick = (t, spanMs) => {
-    const d = new Date(t);
-    return spanMs > 3 * 864e5
-      ? `${MONTHS[d.getMonth()]} ${d.getDate()}`
-      : `${MONTHS[d.getMonth()]} ${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  };
-
-  function cutoff() {
-    if (rangeDays === null) return -Infinity;
-    return Date.now() - rangeDays * 864e5;
   }
 
-  function renderTiles() {
-    tiles.textContent = "";
-    const lim = cutoff();
-    const inRange = obs.filter(o => o.ts.getTime() >= lim);
-    const lastRun = Math.max(...runTimes.filter(t => t >= lim), -Infinity);
+  let chartbox, tooltip, chartnote, legend;
+  function buildChartShell() {
+    chartCard.textContent = "";
+    const head = el("div", "cardhead");
+    const left = el("div");
+    left.append(el("h2", null, "Price history"),
+      el("p", "sub", "Cheapest fare each check · hover anywhere for all values"));
+    head.appendChild(left);
+    const controls = el("div", "controls");
+    [["All", null], ["30 days", 30], ["7 days", 7]].forEach(([label, days]) => {
+      const b = el("button", null, label);
+      b.setAttribute("aria-pressed", String(days === rangeDays));
+      b.addEventListener("click", () => {
+        rangeDays = days;
+        controls.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", "false"));
+        b.setAttribute("aria-pressed", "true");
+        renderChart(); renderTable();
+      });
+      controls.appendChild(b);
+    });
+    head.appendChild(controls);
+    chartCard.appendChild(head);
 
-    let currentLow = null;
-    for (const k of shownKeys) {
-      const pts = seriesPoints.get(k).filter(p => p.t >= lim);
-      if (!pts.length) continue;
-      const last = pts[pts.length - 1];
-      if (!currentLow || last.price < currentLow.price) currentLow = { key: k, ...last };
+    legend = el("div", "legend");
+    if (shownKeys.length > 1) {
+      for (const k of shownKeys) {
+        const b = el("button");
+        b.setAttribute("aria-pressed", "true");
+        const key = el("span", "key"); key.style.background = colorOf[k];
+        b.append(key, el("span", null, seriesName(k)));
+        b.addEventListener("click", () => {
+          if (visible.has(k) && visible.size === 1) return;
+          visible.has(k) ? visible.delete(k) : visible.add(k);
+          b.setAttribute("aria-pressed", String(visible.has(k)));
+          renderChart();
+        });
+        legend.appendChild(b);
+      }
+      if (keys.length > MAX_SERIES) {
+        legend.appendChild(el("span", "dim", `+${keys.length - MAX_SERIES} more not shown`));
+      }
     }
-    let allLow = null;
-    for (const o of inRange) {
-      if (!allLow || o.price < allLow.price) allLow = o;
-    }
-
-    const tile = (label, value, context) => {
-      const t = el("div", "tile");
-      t.append(el("div", "label", label), el("div", "value", value));
-      if (context) t.append(el("div", "context", context));
-      return t;
-    };
-    tiles.append(
-      tile("Lowest current fare", currentLow ? `$${currentLow.price}` : "—",
-        currentLow ? seriesName(currentLow.key) : "no data in range"),
-      tile("Estimated Blue price", currentLow && upcharge != null ? `$${currentLow.price + upcharge}` : "—",
-        target != null ? `alert at ≤ $${target}` : "set alert target in config"),
-      tile("Lowest ever seen", allLow ? `$${allLow.price}` : "—",
-        allLow ? `${seriesName(`${allLow.direction}|${allLow.travelDate}`)} · seen ${MONTHS[allLow.ts.getMonth()]} ${allLow.ts.getDate()}` : ""),
-      tile("Last checked", isFinite(lastRun) ? relTime(lastRun) : "—",
-        `${runTimes.length} check${runTimes.length === 1 ? "" : "s"} total`)
-    );
-  }
-
-  function relTime(t) {
-    const mins = Math.round((Date.now() - t) / 60000);
-    if (mins < 60) return `${mins} min ago`;
-    if (mins < 48 * 60) return `${Math.round(mins / 60)} h ago`;
-    return `${Math.round(mins / 1440)} d ago`;
+    chartCard.appendChild(legend);
+    chartbox = el("div", "chartbox");
+    tooltip = el("div", "tooltip");
+    chartbox.appendChild(tooltip);
+    chartCard.appendChild(chartbox);
+    chartnote = el("div", "chartnote");
+    chartCard.appendChild(chartnote);
   }
 
   function renderChart() {
+    if (!obs.length) return;
     chartbox.querySelector("svg")?.remove();
     tooltip.style.display = "none";
 
@@ -385,83 +536,106 @@
     const runs = runTimes.filter(t => t >= lim);
     const active = shownKeys.filter(k => visible.has(k));
     const pts = active.flatMap(k => seriesPoints.get(k).filter(p => p.t >= lim));
-    const W = Math.max(chartbox.clientWidth || 900, 320), H = 360;
-    const M = { l: 46, r: 14, t: 14, b: 26 };
+    const W = Math.max(chartbox.clientWidth || 900, 320), H = 350;
+    const M = { l: 48, r: 16, t: 16, b: 30 };
 
     const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
-      "aria-label": "Fare price over time, one line per route and travel date" });
+      "aria-label": "Fare price per check, one line per route and travel date" });
     chartbox.appendChild(svg);
     if (!pts.length || !runs.length) {
-      const t = svgEl("text", { x: W / 2, y: H / 2, "text-anchor": "middle", fill: "var(--text-muted)", "font-size": 13 });
-      t.textContent = "No data in this range";
+      const t = svgEl("text", { x: W / 2, y: H / 2, "text-anchor": "middle",
+        fill: "var(--text-muted)", "font-size": 13 });
+      t.textContent = "No checks in this range";
       svg.appendChild(t);
+      chartnote.textContent = "";
       return;
     }
 
-    let x0 = runs[0], x1 = runs[runs.length - 1];
-    if (x0 === x1) { x0 -= 432e5; x1 += 432e5; } // lone run: pad ±12h
+    // x scale: evenly spaced per check while history is sparse, time-based after
+    const span = runs[runs.length - 1] - runs[0];
+    const ordinal = runs.length <= 12 || span < 864e5;
+    const runX = new Map();
+    if (ordinal) {
+      runs.forEach((t, i) => runX.set(t,
+        M.l + (runs.length === 1 ? (W - M.l - M.r) / 2 : i * (W - M.l - M.r) / (runs.length - 1))));
+    } else {
+      runs.forEach(t => runX.set(t, M.l + (t - runs[0]) / span * (W - M.l - M.r)));
+    }
+    const X = t => runX.get(t);
+
     const prices = pts.map(p => p.price);
     let y0 = Math.min(...prices), y1 = Math.max(...prices);
-    if (basicThreshold != null) { y0 = Math.min(y0, basicThreshold); y1 = Math.max(y1, basicThreshold); }
+    if (target != null) { y0 = Math.min(y0, target); y1 = Math.max(y1, target); }
     const pad = Math.max(8, (y1 - y0) * 0.12);
     y0 = Math.max(0, Math.floor((y0 - pad) / 5) * 5);
     y1 = Math.ceil((y1 + pad) / 5) * 5;
-
-    const X = t => M.l + (t - x0) / (x1 - x0) * (W - M.l - M.r);
     const Y = p => M.t + (y1 - p) / (y1 - y0) * (H - M.t - M.b);
 
-    // y gridlines + ticks at clean steps
     const step = [5, 10, 25, 50, 100].find(s => (y1 - y0) / s <= 6) || 200;
     for (let v = Math.ceil(y0 / step) * step; v <= y1; v += step) {
       svg.appendChild(svgEl("line", { x1: M.l, x2: W - M.r, y1: Y(v), y2: Y(v),
         stroke: "var(--gridline)", "stroke-width": 1 }));
-      const t = svgEl("text", { x: M.l - 7, y: Y(v) + 4, "text-anchor": "end",
+      const t = svgEl("text", { x: M.l - 8, y: Y(v) + 4, "text-anchor": "end",
         fill: "var(--text-muted)", "font-size": 11, style: "font-variant-numeric: tabular-nums" });
-      t.textContent = `$${v.toLocaleString()}`;
+      t.textContent = fmtMoney(v);
       svg.appendChild(t);
     }
-    // x ticks (≤6, evenly sampled from runs)
-    const span = x1 - x0;
-    const tickCount = Math.min(runs.length, W < 560 ? 4 : 6);
-    const seen = new Set();
-    for (let i = 0; i < tickCount; i++) {
-      const t = runs[Math.round(i * (runs.length - 1) / Math.max(tickCount - 1, 1))];
-      if (seen.has(t)) continue;
-      seen.add(t);
-      const label = svgEl("text", { x: X(t), y: H - 8, "text-anchor": "middle",
+
+    const multiDay = new Set(runs.map(t => new Date(t).toDateString())).size > 1;
+    const fmtRun = t => {
+      const d = new Date(t);
+      return multiDay ? `${fmtDay(d)} ${fmtClock(d)}` : fmtClock(d);
+    };
+    const maxTicks = W < 600 ? 4 : 7;
+    const tickIdx = new Set();
+    for (let i = 0; i < Math.min(runs.length, maxTicks); i++) {
+      tickIdx.add(Math.round(i * (runs.length - 1) / Math.max(Math.min(runs.length, maxTicks) - 1, 1)));
+    }
+    for (const i of tickIdx) {
+      const t = runs[i];
+      const label = svgEl("text", { x: X(t), y: H - 9, "text-anchor": "middle",
         fill: "var(--text-muted)", "font-size": 11 });
-      label.textContent = fmtTick(t, span);
+      label.textContent = fmtRun(t);
       svg.appendChild(label);
     }
-    // baseline
     svg.appendChild(svgEl("line", { x1: M.l, x2: W - M.r, y1: H - M.b, y2: H - M.b,
       stroke: "var(--baseline)", "stroke-width": 1 }));
 
-    // threshold reference line
-    if (basicThreshold != null && basicThreshold >= y0 && basicThreshold <= y1) {
-      svg.appendChild(svgEl("line", { x1: M.l, x2: W - M.r, y1: Y(basicThreshold), y2: Y(basicThreshold),
+    if (target != null && target >= y0 && target <= y1) {
+      svg.appendChild(svgEl("line", { x1: M.l, x2: W - M.r, y1: Y(target), y2: Y(target),
         stroke: "var(--text-muted)", "stroke-width": 1, "stroke-dasharray": "4 4" }));
-      const lbl = svgEl("text", { x: W - M.r, y: Y(basicThreshold) - 5, "text-anchor": "end",
+      const lbl = svgEl("text", { x: W - M.r, y: Y(target) - 5, "text-anchor": "end",
         fill: "var(--text-muted)", "font-size": 11 });
-      lbl.textContent = `alert ≤ $${basicThreshold} (Blue ≈ $${target})`;
+      lbl.textContent = `alert at ${fmtMoney(target)}`;
       svg.appendChild(lbl);
     }
 
-    // series lines + end dots
+    const showDots = runs.length <= 60;
     for (const k of active) {
       const p = seriesPoints.get(k).filter(q => q.t >= lim);
       if (!p.length) continue;
-      const dAttr = p.map((q, i) => `${i ? "L" : "M"}${X(q.t).toFixed(1)},${Y(q.price).toFixed(1)}`).join("");
-      svg.appendChild(svgEl("path", { d: dAttr, fill: "none", stroke: colorOf[k],
-        "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round" }));
+      svg.appendChild(svgEl("path", {
+        d: p.map((q, i) => `${i ? "L" : "M"}${X(q.t).toFixed(1)},${Y(q.price).toFixed(1)}`).join(""),
+        fill: "none", stroke: colorOf[k], "stroke-width": 2,
+        "stroke-linecap": "round", "stroke-linejoin": "round" }));
+      if (showDots) {
+        for (const q of p.slice(0, -1)) {
+          svg.appendChild(svgEl("circle", { cx: X(q.t), cy: Y(q.price), r: 3,
+            fill: colorOf[k], stroke: "var(--surface-1)", "stroke-width": 1.5 }));
+        }
+      }
       const last = p[p.length - 1];
-      svg.appendChild(svgEl("circle", { cx: X(last.t), cy: Y(last.price), r: 5.5,
+      svg.appendChild(svgEl("circle", { cx: X(last.t), cy: Y(last.price), r: 5,
         fill: colorOf[k], stroke: "var(--surface-1)", "stroke-width": 2 }));
     }
 
-    // crosshair + hover layer
+    chartnote.textContent = runs.length < 5
+      ? `${runs.length} check${runs.length === 1 ? "" : "s"} so far — the schedule adds 4 a day, so this fills in over the coming days.`
+      : "";
+
+    // hover layer
     const hoverDots = active.map(k => {
-      const c = svgEl("circle", { r: 4, fill: colorOf[k], stroke: "var(--surface-1)",
+      const c = svgEl("circle", { r: 4.5, fill: colorOf[k], stroke: "var(--surface-1)",
         "stroke-width": 2, opacity: 0 });
       svg.appendChild(c);
       return [k, c];
@@ -469,25 +643,25 @@
     const crosshair = svgEl("line", { y1: M.t, y2: H - M.b, stroke: "var(--baseline)",
       "stroke-width": 1, opacity: 0 });
     svg.appendChild(crosshair);
-    const overlay = svgEl("rect", { x: M.l, y: M.t, width: W - M.l - M.r, height: H - M.t - M.b,
-      fill: "transparent" });
+    const overlay = svgEl("rect", { x: M.l, y: M.t, width: W - M.l - M.r,
+      height: H - M.t - M.b, fill: "transparent" });
     svg.appendChild(overlay);
 
-    function hideHover() {
+    const hide = () => {
       tooltip.style.display = "none";
       crosshair.setAttribute("opacity", 0);
       hoverDots.forEach(([, c]) => c.setAttribute("opacity", 0));
-    }
-    overlay.addEventListener("pointerleave", hideHover);
+    };
+    overlay.addEventListener("pointerleave", hide);
     overlay.addEventListener("pointermove", ev => {
       const box = svg.getBoundingClientRect();
       const mx = (ev.clientX - box.left) * (W / box.width);
-      const t = runs.reduce((best, cur) => Math.abs(X(cur) - mx) < Math.abs(X(best) - mx) ? cur : best, runs[0]);
+      const t = runs.reduce((b, c) => Math.abs(X(c) - mx) < Math.abs(X(b) - mx) ? c : b, runs[0]);
       crosshair.setAttribute("x1", X(t)); crosshair.setAttribute("x2", X(t));
       crosshair.setAttribute("opacity", 1);
-
       tooltip.textContent = "";
-      tooltip.appendChild(el("div", "when", fmtTick(t, 0)));
+      const d = new Date(t);
+      tooltip.appendChild(el("div", "when", `${fmtDay(d)} · ${fmtClock(d)}`));
       const rows = [];
       for (const [k, dot] of hoverDots) {
         const p = seriesPoints.get(k).find(q => q.t === t);
@@ -500,26 +674,28 @@
       for (const [k, price] of rows) {
         const row = el("div", "row");
         const key = el("span", "key"); key.style.background = colorOf[k];
-        row.append(key, el("span", "val", `$${price}`), el("span", "name", seriesName(k)));
+        row.append(key, el("span", "val", fmtMoney(price)), el("span", "name", seriesName(k)));
         tooltip.appendChild(row);
       }
       tooltip.style.display = "block";
       const bw = chartbox.clientWidth;
       const px = X(t) / W * bw;
-      tooltip.style.left = Math.min(Math.max(px + 14, 0), bw - tooltip.offsetWidth - 4) + "px";
-      tooltip.style.top = "18px";
+      tooltip.style.left = Math.min(Math.max(px + 16, 0), bw - tooltip.offsetWidth - 4) + "px";
+      tooltip.style.top = "14px";
     });
   }
 
+  // ---------------- table ----------------
   function renderTable() {
+    if (!obs.length) return;
     tableCard.textContent = "";
-    tableCard.append(el("h2", null, "Series detail"),
-      el("div", "sub", "Cheapest fare per check · Δ compares the last two checks"));
+    tableCard.append(el("h2", null, "All series"),
+      el("p", "sub", "Cheapest fare per check · Δ compares the last two checks"));
     const lim = cutoff();
     const table = el("table");
-    const thead = el("thead"); const trh = el("tr");
+    const trh = el("tr");
     ["Series", "Latest", "Δ", "Lowest", "Highest", "Checks"].forEach(h => trh.appendChild(el("th", null, h)));
-    thead.appendChild(trh); table.appendChild(thead);
+    const thead = el("thead"); thead.appendChild(trh); table.appendChild(thead);
     const tbody = el("tbody");
     for (const k of shownKeys) {
       const pts = seriesPoints.get(k).filter(p => p.t >= lim);
@@ -532,18 +708,17 @@
         for (let i = 0; i < 5; i++) tr.appendChild(el("td", "dim", "—"));
       } else {
         const last = pts[pts.length - 1], prev = pts[pts.length - 2];
-        const low = pts.reduce((a, b) => b.price < a.price ? b : a);
-        const high = pts.reduce((a, b) => b.price > a.price ? b : a);
-        tr.appendChild(el("td", "num", `$${last.price}`));
+        const lo = pts.reduce((a, b) => b.price < a.price ? b : a);
+        const hi = pts.reduce((a, b) => b.price > a.price ? b : a);
+        tr.appendChild(el("td", "num", fmtMoney(last.price)));
         if (!prev) tr.appendChild(el("td", "dim", "—"));
         else {
           const d = last.price - prev.price;
           tr.appendChild(el("td", d < 0 ? "num drop" : d > 0 ? "num" : "num dim",
-            d === 0 ? "—" : d < 0 ? `▼ $${-d}` : `▲ $${d}`));
+            d === 0 ? "—" : d < 0 ? `▼ ${fmtMoney(-d)}` : `▲ ${fmtMoney(d)}`));
         }
-        const lowD = new Date(low.t);
-        tr.appendChild(el("td", "num", `$${low.price} (${MONTHS[lowD.getMonth()]} ${lowD.getDate()})`));
-        tr.appendChild(el("td", "num", `$${high.price}`));
+        tr.appendChild(el("td", "num", `${fmtMoney(lo.price)} (${fmtDay(new Date(lo.t))})`));
+        tr.appendChild(el("td", "num", fmtMoney(hi.price)));
         tr.appendChild(el("td", "num", String(pts.length)));
       }
       tbody.appendChild(tr);
@@ -552,15 +727,199 @@
     tableCard.appendChild(table);
   }
 
-  function renderAll() { renderTiles(); renderChart(); renderTable(); }
-  renderAll();
+  // ---------------- manage card (control panel only) ----------------
+  function renderManage() {
+    if (!panel) return;
+    manageCard.textContent = "";
+    const head = el("div", "cardhead");
+    const left = el("div");
+    left.append(el("h2", null, "Manage watches"),
+      el("p", "sub", "Add or remove travel dates and set your alert price. Save, then sync so the GitHub schedule follows the new list."));
+    head.appendChild(left);
+    if (panel.git?.unsynced) head.appendChild(el("span", "badge", "local changes not on GitHub yet"));
+    manageCard.appendChild(head);
 
-  let resizeTimer;
-  addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderChart, 120); });
+    const draft = (config.watches || []).map(w => ({
+      from: w.from, to: w.to, dates: [...w.dates],
+    }));
+    let draftTarget = target ?? 200;
+    let dirty = false;
 
-  const lastTs = new Date(Math.max(...runTimes));
-  document.getElementById("footer").textContent =
-    `Data: Google Flights via fast-flights · last check ${lastTs.toLocaleString()} · prices are one-way Blue Basic, USD`;
+    const body = el("div");
+    manageCard.appendChild(body);
+
+    const statusEl = el("div", "statusmsg");
+    const logEl = el("pre", "log");
+    logEl.style.display = "none";
+
+    const saveBtn = el("button", "btn primary", "Save changes");
+    const runBtn = el("button", "btn", "Check fares now");
+    const syncBtn = el("button", "btn", "Sync to GitHub");
+    saveBtn.disabled = true;
+
+    const markDirty = () => { dirty = true; saveBtn.disabled = false; };
+
+    function rebuild() {
+      body.textContent = "";
+      draft.forEach((w, wi) => {
+        const row = el("div", "watchrow");
+        row.appendChild(el("div", "routename", `${w.from} → ${w.to}`));
+        const chips = el("div", "chips");
+        w.dates.sort();
+        w.dates.forEach((d, di) => {
+          const chip = el("span", "chip", fmtTravel(d));
+          const x = el("button", null, "×");
+          x.setAttribute("aria-label", `remove ${d}`);
+          x.addEventListener("click", () => { w.dates.splice(di, 1); markDirty(); rebuild(); });
+          chip.appendChild(x);
+          chips.appendChild(chip);
+        });
+        const adder = el("span", "adder");
+        const input = el("input");
+        input.type = "date";
+        const tomorrow = new Date(Date.now() + 864e5);
+        input.min = tomorrow.toISOString().slice(0, 10);
+        const add = el("button", "btn", "Add date");
+        add.addEventListener("click", () => {
+          const v = input.value;
+          if (!v) return;
+          if (!w.dates.includes(v)) { w.dates.push(v); markDirty(); }
+          rebuild();
+        });
+        adder.append(input, add);
+        chips.appendChild(adder);
+        row.appendChild(chips);
+        body.appendChild(row);
+      });
+
+      // add a new route
+      const addRow = el("div", "watchrow");
+      const adder = el("span", "adder");
+      const fromIn = el("input", "code"); fromIn.placeholder = "BOS"; fromIn.maxLength = 3;
+      const toIn = el("input", "code"); toIn.placeholder = "LAX"; toIn.maxLength = 3;
+      const addBtn = el("button", "btn", "Add route");
+      addBtn.addEventListener("click", () => {
+        const f = fromIn.value.trim().toUpperCase(), t = toIn.value.trim().toUpperCase();
+        if (!/^[A-Z]{3}$/.test(f) || !/^[A-Z]{3}$/.test(t)) {
+          statusEl.textContent = "Airport codes are 3 letters (e.g. BOS, LAX).";
+          statusEl.className = "statusmsg err";
+          return;
+        }
+        if (!draft.some(w => w.from === f && w.to === t)) {
+          draft.push({ from: f, to: t, dates: [] });
+          markDirty();
+        }
+        rebuild();
+      });
+      adder.append(fromIn, el("span", "dim", "→"), toIn, addBtn);
+      addRow.appendChild(adder);
+      body.appendChild(addRow);
+
+      const targetRow = el("div", "targetrow");
+      targetRow.appendChild(el("span", null, "Alert when the fare is at or under $"));
+      const tIn = el("input"); tIn.type = "number"; tIn.min = 1; tIn.max = 10000;
+      tIn.value = draftTarget;
+      tIn.addEventListener("input", () => {
+        draftTarget = Math.round(Number(tIn.value)) || draftTarget;
+        markDirty();
+      });
+      targetRow.appendChild(tIn);
+      body.appendChild(targetRow);
+    }
+    rebuild();
+
+    async function post(url, payload) {
+      const r = await fetch(url, { method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload || {}) });
+      return r.json();
+    }
+    const showLog = text => {
+      if (!text) { logEl.style.display = "none"; return; }
+      logEl.textContent = text;
+      logEl.style.display = "block";
+    };
+    const setStatus = (msg, isErr) => {
+      statusEl.textContent = msg;
+      statusEl.className = "statusmsg" + (isErr ? " err" : "");
+    };
+
+    saveBtn.addEventListener("click", async () => {
+      const cleaned = draft.filter(w => w.dates.length);
+      if (!cleaned.length) { setStatus("Add at least one date before saving.", true); return; }
+      saveBtn.disabled = true;
+      setStatus("Saving…");
+      try {
+        const res = await post("/api/config", { watches: cleaned, price_target_usd: draftTarget });
+        if (!res.ok) { setStatus(res.error || "Save failed.", true); saveBtn.disabled = false; return; }
+        dirty = false;
+        setStatus("Saved ✓ — run a check to see prices for the new dates, and sync so the schedule uses them.");
+      } catch {
+        setStatus("Could not reach the local server.", true);
+        saveBtn.disabled = false;
+      }
+    });
+
+    runBtn.addEventListener("click", async () => {
+      runBtn.disabled = true;
+      const started = Date.now();
+      runBtn.textContent = "Checking…";
+      const tick = setInterval(() => {
+        runBtn.textContent = `Checking… ${Math.round((Date.now() - started) / 1000)}s`;
+      }, 1000);
+      setStatus("Querying Google Flights — usually 20–90 seconds.");
+      try {
+        const res = await post("/api/run");
+        showLog(res.output);
+        setStatus(res.ok ? "Check finished — reloading data…" : "Check hit errors — details below.", !res.ok);
+        if (res.ok) setTimeout(() => location.reload(), 900);
+      } catch {
+        setStatus("Could not reach the local server.", true);
+      } finally {
+        clearInterval(tick);
+        runBtn.disabled = false;
+        runBtn.textContent = "Check fares now";
+      }
+    });
+
+    syncBtn.addEventListener("click", async () => {
+      syncBtn.disabled = true; syncBtn.textContent = "Syncing…";
+      setStatus("Committing and pushing to GitHub…");
+      try {
+        const res = await post("/api/sync");
+        showLog(res.output);
+        setStatus(res.ok ? "Sync finished." : "Sync failed — details below.", !res.ok);
+      } catch {
+        setStatus("Could not reach the local server.", true);
+      } finally {
+        syncBtn.disabled = false; syncBtn.textContent = "Sync to GitHub";
+      }
+    });
+
+    const actions = el("div", "actions");
+    actions.append(saveBtn, runBtn, syncBtn);
+    manageCard.append(actions, statusEl, logEl);
+  }
+
+  // ---------------- boot ----------------
+  if (obs.length) {
+    buildChartShell();
+    renderCards();
+    renderChart();
+    renderTable();
+    let rt;
+    addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(renderChart, 120); });
+  }
+  renderManage();
+
+  const foot = [];
+  if (runTimes.length) {
+    foot.push(`last check ${new Date(runTimes[runTimes.length - 1]).toLocaleString()}`);
+    foot.push(`${runTimes.length} checks recorded`);
+  }
+  foot.push("prices are one-way Blue Basic in USD, from Google Flights");
+  if (!csvOk && !obs.length) foot.push("(no data file found yet)");
+  document.getElementById("footer").textContent = foot.join(" · ");
 })();
 </script>
 </body>

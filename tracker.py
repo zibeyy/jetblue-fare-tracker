@@ -3,12 +3,10 @@
 
 Queries Google Flights (via fast-flights) for the routes/dates in config.json,
 appends every observed fare to data/history.csv, and pushes an ntfy.sh
-notification when the cheapest fare implies a Blue price at or below target.
+notification when the cheapest fare drops to alert.price_target_usd or below.
 
-Important: Google Flights lists each itinerary at its *cheapest* fare, which
-for JetBlue is Blue Basic. The Blue fare is estimated as
-    price + alert.blue_upcharge_estimate_usd
-Calibrate that estimate against jetblue.com occasionally.
+Google Flights lists each itinerary at its *cheapest* fare, which for JetBlue
+is Blue Basic — that is the price tracked and alerted on.
 
 Runs on a schedule from .github/workflows/track.yml; also runnable locally:
     .venv/Scripts/python tracker.py
@@ -42,8 +40,7 @@ CSV_HEADER = [
 ]
 
 DEFAULT_ALERT = {
-    "blue_target_usd": 200,
-    "blue_upcharge_estimate_usd": 35,
+    "price_target_usd": 200,
     "cooldown_hours": 20,
     "realert_extra_drop_usd": 10,
 }
@@ -54,7 +51,14 @@ def load_config() -> dict:
         cfg = json.load(f)
     cfg.setdefault("airline_code", "B6")
     cfg.setdefault("nonstop_only", True)
-    cfg["alert"] = {**DEFAULT_ALERT, **cfg.get("alert", {})}
+    alert = {**DEFAULT_ALERT, **cfg.get("alert", {})}
+    if "price_target_usd" not in cfg.get("alert", {}) and "blue_target_usd" in alert:
+        # legacy schema: target was on estimated Blue = Basic + upcharge
+        alert["price_target_usd"] = (alert["blue_target_usd"]
+                                     - alert.get("blue_upcharge_estimate_usd", 35))
+        print(f"note: legacy alert keys converted -> "
+              f"price_target_usd ${alert['price_target_usd']}")
+    cfg["alert"] = alert
     if not cfg.get("watches"):
         sys.exit("config.json has no 'watches' — nothing to track.")
     return cfg
@@ -153,12 +157,10 @@ def maybe_alert(cfg: dict, state: dict, key: str, origin: str, dest: str,
                 travel_date: str, cheapest: dict, all_prices: list[int],
                 airline: str, topic: str) -> None:
     alert_cfg = cfg["alert"]
-    target = alert_cfg["blue_target_usd"]
-    upcharge = alert_cfg["blue_upcharge_estimate_usd"]
-    basic_threshold = target - upcharge
+    target = alert_cfg["price_target_usd"]
     price = cheapest["price_usd"]
 
-    if price > basic_threshold:
+    if price > target:
         return
 
     prior = state.get(key)
@@ -176,17 +178,15 @@ def maybe_alert(cfg: dict, state: dict, key: str, origin: str, dest: str,
                   f"{hours_since:.1f}h ago — suppressed")
             return
 
-    est_blue = price + upcharge
     dep = cheapest["depart_local"][11:]
     hours_min = f"{cheapest['duration_min'] // 60}h{cheapest['duration_min'] % 60:02d}m"
-    title = f"{airline} {origin}->{dest} {travel_date}: Blue ~${est_blue}"
+    title = f"{airline} {origin}->{dest} {travel_date}: ${price}"
     message = (
-        f"Blue Basic ${price} + ~${upcharge} upcharge = ~${est_blue} "
-        f"(target <= ${target})\n"
+        f"Blue Basic ${price} — at or below your ${target} target\n"
         f"Cheapest: departs {dep}, {hours_min}, "
         f"{cheapest['stops']} stop(s)\n"
         f"All fares this check: {', '.join(f'${p}' for p in sorted(all_prices))}\n"
-        f"Verify the exact Blue price on jetblue.com before booking."
+        f"Prices move — book on jetblue.com or Google Flights."
     )
     click = gflights_url(origin, dest, travel_date, airline)
 
@@ -282,8 +282,7 @@ def main() -> int:
         cheapest = min(route_rows, key=lambda r: r["price_usd"])
         summary.append(f"{key}: cheapest ${cheapest['price_usd']} "
                        f"({len(route_rows)} fares)")
-        print(f"    {len(route_rows)} fares, cheapest ${cheapest['price_usd']} "
-              f"(est. Blue ~${cheapest['price_usd'] + cfg['alert']['blue_upcharge_estimate_usd']})")
+        print(f"    {len(route_rows)} fares, cheapest ${cheapest['price_usd']}")
 
         maybe_alert(cfg, state, key, origin, dest, travel_date,
                     cheapest, prices, airline, topic)

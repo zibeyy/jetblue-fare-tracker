@@ -1,11 +1,12 @@
 # JetBlue BOS ⇄ LAX fare tracker
 
-Tracks JetBlue fares for specific travel dates via Google Flights, keeps a
-price history, pushes a phone notification when the **Blue** fare is estimated
-at or below your target, and charts the history on a GitHub Pages dashboard.
+Tracks JetBlue **Blue Basic** fares for specific travel dates via Google
+Flights, keeps a price history, pushes a phone notification when a fare drops
+to your target, and charts everything on a dashboard.
 
-**Cost: $0.** No server, no credit card. A GitHub Actions cron job does the
-checking 4× a day; ntfy.sh delivers the alerts; GitHub Pages hosts the chart.
+**Cost: $0.** No cloud server, no credit card. A GitHub Actions cron job does
+the checking 4× a day; ntfy.sh delivers the alerts; GitHub Pages hosts the
+dashboard read-only, and a local control panel manages it.
 
 ```
 GitHub Actions (cron, 4x/day)
@@ -13,38 +14,35 @@ GitHub Actions (cron, 4x/day)
        ├─ appends fares  → data/history.csv   (committed back to the repo)
        ├─ alert decision → data/alert_state.json
        └─ push alert     → ntfy.sh → your phone
-index.html (GitHub Pages) ── charts data/history.csv
+index.html ── the dashboard, two flavors:
+  · GitHub Pages: read-only charts, from anywhere
+  · locally via serve.py: same page plus the control panel —
+    edit watched dates/target, run a check now, sync to GitHub
 ```
 
-## Important: what price this tracks
-
-Google Flights lists each flight at its *cheapest* fare — for JetBlue that is
-**Blue Basic**. The Blue fare you actually want is estimated as
-`price + blue_upcharge_estimate_usd` (default **$35**). An alert fires when
-`Blue Basic + upcharge ≤ blue_target_usd` (default **$200**), i.e. when Blue
-Basic drops to **$165**. Check jetblue.com once for your dates, note the real
-Basic→Blue difference, and adjust `blue_upcharge_estimate_usd` in
-[config.json](config.json). Always verify the exact Blue price on jetblue.com
-before booking.
+Prices tracked are **Blue Basic** — the cheapest fare Google Flights lists per
+flight. (Blue and other bundles cost more at checkout; this tracker doesn't
+estimate them.)
 
 ## One-time setup (~10 minutes)
 
 Prerequisites: a GitHub account, git, and the [GitHub CLI](https://cli.github.com)
 (`gh`). Python is only needed to run the tracker locally.
 
-### 1. Edit `config.json`
+### 1. Set your travel dates
 
-Set your real travel dates (the shipped ones are placeholders):
+Easiest way — the control panel:
 
-```json
-"watches": [
-  { "from": "BOS", "to": "LAX", "dates": ["2026-11-13", "2026-11-20"] },
-  { "from": "LAX", "to": "BOS", "dates": ["2026-11-16", "2026-11-23"] }
-]
+```bash
+.venv/Scripts/python serve.py
 ```
 
-Each date is tracked separately (its own line on the chart, its own alerts).
-Keep it under ~8 dates total so every query fits comfortably in a run.
+Open http://localhost:8000, use **Manage watches** to add/remove dates and set
+your alert price, then **Save changes**. (Or edit the `watches` list in
+[config.json](config.json) by hand — same thing.)
+
+Each date is tracked separately (its own card and chart line, its own alerts).
+Keep it to ~8 dates so every query fits comfortably in a run.
 
 ### 2. Set up phone notifications (ntfy)
 
@@ -104,21 +102,24 @@ That's it. It now checks fares at 02:37, 08:37, 14:37, 20:37 UTC daily.
 
 ## Day-to-day
 
-- **Alerts** arrive on your phone only when the estimated Blue price crosses
-  your target (with a 20 h cooldown per date; a further $10 drop re-alerts
-  immediately). Tapping the alert opens Google Flights for that route/date.
-- **Change dates or thresholds** any time by editing `config.json` on
-  github.com directly — the next run picks it up. Past dates are skipped
-  automatically.
-- **The chart** shows the cheapest fare per check, one line per route+date,
-  with the alert threshold drawn as a dashed reference line.
+- **Alerts** arrive on your phone when a fare drops to your target or below
+  (20 h cooldown per date; a further $10 drop re-alerts immediately). Tapping
+  the alert opens Google Flights for that route/date.
+- **Change dates or the target** from the control panel: run
+  `.venv/Scripts/python serve.py`, edit in **Manage watches**, **Save**, then
+  **Sync to GitHub** so the schedule follows the new list. (Editing
+  `config.json` on github.com works too.) Past dates are skipped automatically.
+- **Check fares now** on the panel runs a real check immediately — handy right
+  after adding dates. **Sync** also uploads these manual checks so the Pages
+  chart includes them.
+- **The dashboard** shows a card per tracked date (current price, change,
+  low/high, trend) and the full history chart with the alert line.
 
 ## Tuning (all in `config.json`)
 
 | Key | Default | Meaning |
 |---|---|---|
-| `alert.blue_target_usd` | 200 | Alert when estimated Blue ≤ this |
-| `alert.blue_upcharge_estimate_usd` | 35 | Your calibrated Basic→Blue difference |
+| `alert.price_target_usd` | 200 | Alert when the fare is ≤ this (also editable on the panel) |
 | `alert.cooldown_hours` | 20 | Minimum gap between alerts per date |
 | `alert.realert_extra_drop_usd` | 10 | A further drop this big re-alerts despite cooldown |
 | `nonstop_only` | true | Set false to include connections |
@@ -134,9 +135,8 @@ That's it. It now checks fares at 02:37, 08:37, 14:37, 20:37 UTC daily.
 - **"Scheduled workflow disabled" email:** GitHub pauses crons after ~60 days
   without repo activity. The bot's own data commits normally prevent this;
   if it happens, one click re-enables it.
-- **No alert but the price looks low:** the alert compares *estimated Blue*
-  (Basic + upcharge) to the target — check the math and the cooldown, and see
-  the Actions run log, which prints every decision.
+- **No alert but the price looks low:** check the cooldown settings, and see
+  the Actions run log — it prints every alert decision.
 - **Occasional missing data points:** a failed query in one run is retried
   3× and then skipped; the chart just won't have a point for that check.
 - Google Flights has no official API and scraping is against its ToS; at a
@@ -144,20 +144,18 @@ That's it. It now checks fares at 02:37, 08:37, 14:37, 20:37 UTC daily.
   failed queries), not anything else. Be a good citizen: don't crank the
   schedule to every few minutes.
 
-## Running locally (optional)
+## Running locally
 
 ```bash
 python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
 ```
 
 ```bash
-.venv/Scripts/python tracker.py
+.venv/Scripts/python serve.py
 ```
 
-```bash
-python -m http.server 8000
-```
-
-Then open http://localhost:8000 for the dashboard. A local `NTFY_TOPIC` env
-var (or the `ntfy_topic` key in config) enables real alerts locally; leave
-both unset for a dry run that prints would-be alerts.
+Then open http://localhost:8000 — the dashboard plus the control panel
+(manage watches, check now, sync). `serve.py` binds to 127.0.0.1 only.
+`.venv/Scripts/python tracker.py` still works standalone for a one-off check.
+A local `NTFY_TOPIC` env var (or the `ntfy_topic` config key) enables real
+alerts locally; leave both unset and local runs just print would-be alerts.
