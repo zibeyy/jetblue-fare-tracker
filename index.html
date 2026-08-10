@@ -338,9 +338,24 @@
     const [dir, date] = k.split("|");
     return `${dir.replace("-", " → ")} · ${fmtTravelShort(date)}`;
   };
-  const keys = [...new Set(obs.map(o => `${o.direction}|${o.travelDate}`))].sort();
-  const shownKeys = keys.slice(0, MAX_SERIES);
+  // Only currently-watched, still-upcoming dates get cards and default chart
+  // lines; anything else in the archive is "removed" (behind a toggle).
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const watchedKeys = new Set();
+  for (const w of (config.watches || [])) {
+    for (const d of (w.dates || [])) watchedKeys.add(`${w.from}-${w.to}|${d}`);
+  }
+  const isActive = k => watchedKeys.has(k) && k.split("|")[1] >= todayIso;
+
+  const histKeys = [...new Set(obs.map(o => `${o.direction}|${o.travelDate}`))].sort();
+  const ordered = [...histKeys.filter(isActive), ...histKeys.filter(k => !isActive(k))];
+  const shownKeys = ordered.slice(0, MAX_SERIES);
+  const activeShown = shownKeys.filter(isActive);
+  const retiredShown = shownKeys.filter(k => !isActive(k));
   const colorOf = Object.fromEntries(shownKeys.map((k, i) => [k, `var(--series-${i + 1})`]));
+  const pendingKeys = [...watchedKeys]
+    .filter(k => k.split("|")[1] >= todayIso && !histKeys.includes(k)).sort();
+  const seriesLabel = k => seriesName(k) + (isActive(k) ? "" : " (removed)");
   const runTimes = [...new Set(obs.map(o => o.ts.getTime()))].sort((a, b) => a - b);
 
   const seriesPoints = new Map();
@@ -376,7 +391,9 @@
   })();
 
   // ---------------- view state ----------------
-  const visible = new Set(shownKeys);
+  const visible = new Set(activeShown);
+  let showRetired = false;
+  const chartKeys = () => showRetired ? shownKeys : activeShown;
   let rangeDays = null;
   const cutoff = () => rangeDays === null ? -Infinity : Date.now() - rangeDays * 864e5;
 
@@ -386,11 +403,13 @@
   const manageCard = el("div", "card");
   const tableCard = el("div", "card");
 
-  if (obs.length) {
+  const hasCards = activeShown.length > 0 || pendingKeys.length > 0;
+  if (hasCards) {
     app.appendChild(el("div", "section-title", "Your dates"));
     app.appendChild(cardsWrap);
-    app.appendChild(chartCard);
-  } else {
+  }
+  if (obs.length) app.appendChild(chartCard);
+  if (!hasCards && !obs.length) {
     const hero = el("div", "hero");
     hero.append(el("div", "big", "No fare checks recorded yet"));
     if (panel) {
@@ -401,7 +420,6 @@
     app.appendChild(hero);
   }
   if (panel) app.appendChild(manageCard);
-  else if (!obs.length) { /* nothing else to show */ }
   if (obs.length) app.appendChild(tableCard);
 
   // ---------------- date cards ----------------
@@ -428,7 +446,7 @@
   function renderCards() {
     cardsWrap.textContent = "";
     const grid = el("div", "cards");
-    for (const k of shownKeys) {
+    for (const k of activeShown) {
       const pts = seriesPoints.get(k);
       if (!pts.length) continue;
       const [dir, travelDate] = k.split("|");
@@ -465,6 +483,24 @@
       card.appendChild(sparkline(pts, colorOf[k]));
       grid.appendChild(card);
     }
+    for (const k of pendingKeys) {
+      const [dir, travelDate] = k.split("|");
+      const card = el("div", "datecard");
+      const top = el("div", "toprow");
+      const route = el("span", "route");
+      const dot = el("span", "dot"); dot.style.background = "var(--baseline)";
+      route.append(dot, document.createTextNode(dir.replace("-", " → ")));
+      top.append(route, el("span", "pill", "awaiting first check"));
+      card.appendChild(top);
+      card.appendChild(el("div", "when", fmtTravel(travelDate)));
+      const priceRow = el("div", "pricerow");
+      priceRow.appendChild(el("span", "price", "—"));
+      card.appendChild(priceRow);
+      card.appendChild(el("div", "range", panel
+        ? "no checks yet — press “Check fares now” below"
+        : "no checks yet — the next scheduled run covers it"));
+      grid.appendChild(card);
+    }
     cardsWrap.appendChild(grid);
   }
 
@@ -496,29 +532,23 @@
       });
       controls.appendChild(b);
     });
+    if (retiredShown.length) {
+      const rb = el("button", null, `Removed dates (${retiredShown.length})`);
+      rb.setAttribute("aria-pressed", "false");
+      rb.addEventListener("click", () => {
+        showRetired = !showRetired;
+        rb.setAttribute("aria-pressed", String(showRetired));
+        for (const k of retiredShown) showRetired ? visible.add(k) : visible.delete(k);
+        rebuildLegend(); renderChart(); renderTable();
+      });
+      controls.appendChild(rb);
+    }
     head.appendChild(controls);
     chartCard.appendChild(head);
 
     legend = el("div", "legend");
-    if (shownKeys.length > 1) {
-      for (const k of shownKeys) {
-        const b = el("button");
-        b.setAttribute("aria-pressed", "true");
-        const key = el("span", "key"); key.style.background = colorOf[k];
-        b.append(key, el("span", null, seriesName(k)));
-        b.addEventListener("click", () => {
-          if (visible.has(k) && visible.size === 1) return;
-          visible.has(k) ? visible.delete(k) : visible.add(k);
-          b.setAttribute("aria-pressed", String(visible.has(k)));
-          renderChart();
-        });
-        legend.appendChild(b);
-      }
-      if (keys.length > MAX_SERIES) {
-        legend.appendChild(el("span", "dim", `+${keys.length - MAX_SERIES} more not shown`));
-      }
-    }
     chartCard.appendChild(legend);
+    rebuildLegend();
     chartbox = el("div", "chartbox");
     tooltip = el("div", "tooltip");
     chartbox.appendChild(tooltip);
@@ -527,15 +557,37 @@
     chartCard.appendChild(chartnote);
   }
 
+  function rebuildLegend() {
+    legend.textContent = "";
+    const ks = chartKeys();
+    if (ks.length <= 1) return;
+    for (const k of ks) {
+      const b = el("button");
+      b.setAttribute("aria-pressed", String(visible.has(k)));
+      const key = el("span", "key"); key.style.background = colorOf[k];
+      b.append(key, el("span", null, seriesLabel(k)));
+      b.addEventListener("click", () => {
+        if (visible.has(k) && visible.size === 1) return;
+        visible.has(k) ? visible.delete(k) : visible.add(k);
+        b.setAttribute("aria-pressed", String(visible.has(k)));
+        renderChart();
+      });
+      legend.appendChild(b);
+    }
+    if (ordered.length > MAX_SERIES) {
+      legend.appendChild(el("span", "dim", `+${ordered.length - MAX_SERIES} more not shown`));
+    }
+  }
+
   function renderChart() {
     if (!obs.length) return;
     chartbox.querySelector("svg")?.remove();
     tooltip.style.display = "none";
 
     const lim = cutoff();
-    const runs = runTimes.filter(t => t >= lim);
-    const active = shownKeys.filter(k => visible.has(k));
+    const active = chartKeys().filter(k => visible.has(k));
     const pts = active.flatMap(k => seriesPoints.get(k).filter(p => p.t >= lim));
+    const runs = [...new Set(pts.map(p => p.t))].sort((a, b) => a - b);
     const W = Math.max(chartbox.clientWidth || 900, 320), H = 350;
     const M = { l: 48, r: 16, t: 16, b: 30 };
 
@@ -674,7 +726,7 @@
       for (const [k, price] of rows) {
         const row = el("div", "row");
         const key = el("span", "key"); key.style.background = colorOf[k];
-        row.append(key, el("span", "val", fmtMoney(price)), el("span", "name", seriesName(k)));
+        row.append(key, el("span", "val", fmtMoney(price)), el("span", "name", seriesLabel(k)));
         tooltip.appendChild(row);
       }
       tooltip.style.display = "block";
@@ -697,12 +749,12 @@
     ["Series", "Latest", "Δ", "Lowest", "Highest", "Checks"].forEach(h => trh.appendChild(el("th", null, h)));
     const thead = el("thead"); thead.appendChild(trh); table.appendChild(thead);
     const tbody = el("tbody");
-    for (const k of shownKeys) {
+    for (const k of chartKeys()) {
       const pts = seriesPoints.get(k).filter(p => p.t >= lim);
       const tr = el("tr");
       const td0 = el("td");
       const dot = el("span", "dot"); dot.style.background = colorOf[k];
-      td0.append(dot, document.createTextNode(seriesName(k)));
+      td0.append(dot, document.createTextNode(seriesLabel(k)));
       tr.appendChild(td0);
       if (!pts.length) {
         for (let i = 0; i < 5; i++) tr.appendChild(el("td", "dim", "—"));
@@ -902,9 +954,9 @@
   }
 
   // ---------------- boot ----------------
+  if (hasCards) renderCards();
   if (obs.length) {
     buildChartShell();
-    renderCards();
     renderChart();
     renderTable();
     let rt;
