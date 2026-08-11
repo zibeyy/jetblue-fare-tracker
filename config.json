@@ -5,16 +5,14 @@
       "from": "LAX",
       "to": "BOS",
       "dates": [
-        "2026-11-27",
-        "2026-11-28",
-        "2026-11-29"
+        "2026-11-28"
       ]
     }
   ],
   "airline_code": "B6",
   "nonstop_only": false,
   "alert": {
-    "price_target_usd": 200,
+    "price_target_usd": 240,
     "cooldown_hours": 20,
     "realert_extra_drop_usd": 10
   },
