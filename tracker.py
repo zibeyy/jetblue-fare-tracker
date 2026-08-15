@@ -81,12 +81,20 @@ def save_state(state: dict) -> None:
 
 
 def fmt_leg_dt(simple_dt) -> str:
-    """SimpleDatetime -> 'YYYY-MM-DDTHH:MM'. Minutes are omitted upstream when :00."""
-    d = list(simple_dt.date)
-    t = list(simple_dt.time)
-    hh = t[0] if t else 0
-    mm = t[1] if len(t) > 1 else 0
-    return f"{d[0]:04d}-{d[1]:02d}-{d[2]:02d}T{hh:02d}:{mm:02d}"
+    """SimpleDatetime -> 'YYYY-MM-DDTHH:MM'.
+
+    Google's data is ragged: minutes are omitted when :00, and any component
+    can be None (seen live on some connection itineraries). Unknown time
+    renders as ??:??; unknown date renders the whole field empty.
+    """
+    d = list(simple_dt.date or [])
+    t = list(simple_dt.time or [])
+    if len(d) < 3 or not all(isinstance(x, int) for x in d[:3]):
+        return ""
+    hh = t[0] if t and isinstance(t[0], int) else None
+    mm = t[1] if len(t) > 1 and isinstance(t[1], int) else 0
+    time_part = f"{hh:02d}:{mm:02d}" if hh is not None else "??:??"
+    return f"{d[0]:04d}-{d[1]:02d}-{d[2]:02d}T{time_part}"
 
 
 def fetch_itineraries(cfg: dict, origin: str, dest: str, date: str):
@@ -258,22 +266,31 @@ def main() -> int:
 
         airline = airline_name(result, cfg["airline_code"])
         route_rows = []
+        skipped = 0
         for itin in result:
             if not itin.price or itin.price <= 0:
                 continue
-            legs = itin.flights
-            route_rows.append({
-                "run_ts_utc": run_ts,
-                "direction": f"{origin}-{dest}",
-                "travel_date": travel_date,
-                "airline": ", ".join(itin.airlines),
-                "stops": len(legs) - 1,
-                "depart_local": fmt_leg_dt(legs[0].departure),
-                "arrive_local": fmt_leg_dt(legs[-1].arrival),
-                "duration_min": sum(leg.duration for leg in legs),
-                "plane": ", ".join(leg.plane_type for leg in legs),
-                "price_usd": itin.price,
-            })
+            try:
+                legs = itin.flights
+                route_rows.append({
+                    "run_ts_utc": run_ts,
+                    "direction": f"{origin}-{dest}",
+                    "travel_date": travel_date,
+                    "airline": ", ".join(a or "?" for a in (itin.airlines or [])),
+                    "stops": len(legs) - 1,
+                    "depart_local": fmt_leg_dt(legs[0].departure),
+                    "arrive_local": fmt_leg_dt(legs[-1].arrival),
+                    "duration_min": sum(leg.duration or 0 for leg in legs),
+                    "plane": ", ".join(leg.plane_type or "?" for leg in legs),
+                    "price_usd": itin.price,
+                })
+            except Exception as err:
+                # one malformed itinerary must never kill the whole run
+                skipped += 1
+                print(f"    skipping one itinerary (bad data): {err!r}")
+        if skipped:
+            print(f"    {skipped} itinerar{'y' if skipped == 1 else 'ies'} "
+                  f"skipped this check")
         if not route_rows:
             print("    itineraries returned but none had a usable price")
             summary.append(f"{key}: no priced fares")
